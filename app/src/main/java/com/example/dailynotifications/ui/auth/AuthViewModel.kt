@@ -23,7 +23,11 @@ class AuthViewModel @Inject constructor(
                 _events.emit("Enter email and password.")
                 return@launch
             }
-            authRepository.login(email, password)
+            runCatching {
+                authRepository.login(email, password)
+            }.onFailure {
+                _events.emit(it.message ?: "Login failed.")
+            }
         }
     }
 
@@ -33,7 +37,11 @@ class AuthViewModel @Inject constructor(
                 _events.emit("Fill all fields.")
                 return@launch
             }
-            authRepository.register(name, email, password)
+            runCatching {
+                authRepository.register(name, email, password)
+            }.onFailure {
+                _events.emit(it.message ?: "Registration failed.")
+            }
         }
     }
 

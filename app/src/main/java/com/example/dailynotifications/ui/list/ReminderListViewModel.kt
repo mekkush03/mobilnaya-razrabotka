@@ -18,7 +18,7 @@ class ReminderListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.loadReminders()
+            runCatching { repository.loadReminders() }
         }
     }
 }

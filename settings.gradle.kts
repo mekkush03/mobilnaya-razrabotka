@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DailyNotifications"
 include(":app")
+include(":backend")
  

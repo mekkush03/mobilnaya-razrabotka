@@ -4,14 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
 import androidx.work.WorkManager
+import com.example.dailynotifications.BuildConfig
 import com.example.dailynotifications.core.notifications.NotificationScheduler
 import com.example.dailynotifications.core.notifications.WorkManagerNotificationScheduler
 import com.example.dailynotifications.data.local.AppDatabase
 import com.example.dailynotifications.data.local.ReminderDao
+import com.example.dailynotifications.data.remote.AuthApi
 import com.example.dailynotifications.data.remote.BackendApi
-import com.example.dailynotifications.data.remote.MockBackendApi
-import com.example.dailynotifications.data.remote.MockReminderApi
-import com.example.dailynotifications.data.remote.ReminderApi
+import com.example.dailynotifications.data.remote.KtorAuthApi
+import com.example.dailynotifications.data.remote.KtorBackendApi
+import com.example.dailynotifications.data.remote.networkJson
 import com.example.dailynotifications.data.repository.auth.AuthRepository
 import com.example.dailynotifications.data.repository.auth.SharedPrefsAuthRepository
 import com.example.dailynotifications.data.repository.reminder.ReminderRepository
@@ -23,6 +25,14 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.serialization.kotlinx.json.json
 import javax.inject.Singleton
 
 @Module
@@ -37,7 +47,23 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideReminderApi(): ReminderApi = MockReminderApi()
+    fun provideHttpClient(): HttpClient {
+        return HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(networkJson)
+            }
+            install(Logging) {
+                logger = Logger.DEFAULT
+                level = LogLevel.INFO
+            }
+        }
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(client: HttpClient): AuthApi {
+        return KtorAuthApi(client, BuildConfig.BACKEND_URL)
+    }
 
     @Provides
     @Singleton
@@ -47,13 +73,18 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(prefs: SharedPreferences): AuthRepository {
-        return SharedPrefsAuthRepository(prefs)
+    fun provideAuthRepository(
+        prefs: SharedPreferences,
+        authApi: AuthApi
+    ): AuthRepository {
+        return SharedPrefsAuthRepository(prefs, authApi)
     }
 
     @Provides
     @Singleton
-    fun provideBackendApi(): BackendApi = MockBackendApi()
+    fun provideBackendApi(client: HttpClient): BackendApi {
+        return KtorBackendApi(client, BuildConfig.BACKEND_URL)
+    }
 
     @Provides
     @Singleton

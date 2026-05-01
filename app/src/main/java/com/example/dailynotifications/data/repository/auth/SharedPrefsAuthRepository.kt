@@ -1,42 +1,40 @@
 package com.example.dailynotifications.data.repository.auth
 
 import android.content.SharedPreferences
-import com.example.dailynotifications.data.repository.auth.AuthRepository
-import com.example.dailynotifications.data.repository.auth.AuthState
+import com.example.dailynotifications.data.remote.AuthApi
+import com.example.dailynotifications.data.remote.dto.AuthSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.UUID
 
 class SharedPrefsAuthRepository(
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    private val authApi: AuthApi
 ) : AuthRepository {
 
     private val _authState = MutableStateFlow(readState())
     override val authState: StateFlow<AuthState> = _authState
 
     override suspend fun login(email: String, password: String) {
-        val token = UUID.randomUUID().toString()
-        prefs.edit()
-            .putString(KEY_TOKEN, token)
-            .putString(KEY_EMAIL, email)
-            .putString(KEY_NAME, "User")
-            .putBoolean(KEY_GUEST, false)
-            .apply()
-        _authState.value = readState()
+        val session = authApi.login(email, password)
+        saveSession(session)
     }
 
     override suspend fun register(name: String, email: String, password: String) {
-        val token = UUID.randomUUID().toString()
+        val session = authApi.register(name, email, password)
+        saveSession(session)
+    }
+
+    override fun logout() {
         prefs.edit()
-            .putString(KEY_TOKEN, token)
-            .putString(KEY_EMAIL, email)
-            .putString(KEY_NAME, name)
+            .remove(KEY_TOKEN)
+            .remove(KEY_EMAIL)
+            .remove(KEY_NAME)
             .putBoolean(KEY_GUEST, false)
             .apply()
         _authState.value = readState()
     }
 
-    override fun logout() {
+    override fun skipAuth() {
         prefs.edit()
             .remove(KEY_TOKEN)
             .remove(KEY_EMAIL)
@@ -46,13 +44,23 @@ class SharedPrefsAuthRepository(
         _authState.value = readState()
     }
 
-    override fun skipAuth() {
-        prefs.edit().putBoolean(KEY_GUEST, true).apply()
+    override fun startAuth() {
+        prefs.edit()
+            .remove(KEY_TOKEN)
+            .remove(KEY_EMAIL)
+            .remove(KEY_NAME)
+            .putBoolean(KEY_GUEST, false)
+            .apply()
         _authState.value = readState()
     }
 
-    override fun startAuth() {
-        prefs.edit().putBoolean(KEY_GUEST, false).apply()
+    private fun saveSession(session: AuthSession) {
+        prefs.edit()
+            .putString(KEY_TOKEN, session.token)
+            .putString(KEY_EMAIL, session.email)
+            .putString(KEY_NAME, session.name)
+            .putBoolean(KEY_GUEST, false)
+            .apply()
         _authState.value = readState()
     }
 

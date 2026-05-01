@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: daily-notifications-backend
+  datasource:
+    url: jdbc:h2:file:./backend/build/db/daily-notifications;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:8080}
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me-change-me-change-me-change-me-change-me-change-me}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:24}

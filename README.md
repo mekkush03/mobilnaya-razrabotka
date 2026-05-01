@@ -27,6 +27,7 @@ DailyNotifications — Android-приложение для создания на
 - WorkManager
 - Room (SQLite)
 - Hilt (DI)
+- Ktor Client / Ktor Server
 
 ## Требования
 - Android Studio
@@ -36,17 +37,25 @@ DailyNotifications — Android-приложение для создания на
 ## Запуск
 1. Откройте проект в Android Studio.
 2. Дождитесь синхронизации Gradle.
-3. Запустите конфигурацию `app` на эмуляторе или устройстве.
+3. Запустите бэкенд: `.\gradlew.bat :backend:bootRun`
+4. Запустите конфигурацию `app` на эмуляторе или устройстве.
+
+По умолчанию Android-клиент ходит в `http://10.0.2.2:8080`, что подходит для Android Emulator. Для физического устройства нужно заменить `BACKEND_URL` в [app/build.gradle.kts](/C:/Users/venya/AndroidStudioProjects/DailyNotifications/app/build.gradle.kts:22) на IP машины в локальной сети.
 
 ## Сборка из командной строки
 ```powershell
 .\gradlew assembleDebug
 ```
 
+```powershell
+.\gradlew :backend:bootRun
+```
+
 ## Разрешения
 - `POST_NOTIFICATIONS` требуется на Android 13+.
 
 ## Примечания
-- Авторизация реализована локально через SharedPreferences (без реального бекенда).
-- Отправка напоминаний на сервер замокана.
-- Настройки хранятся в памяти и сбрасываются после перезапуска приложения.
+- Бэкенд переписан в Spring Boot-архитектуре по образцу `controller/service/repository/entity/dto/security/config/exception`.
+- По умолчанию сервер хранит данные в файловой H2 базе внутри `backend/build/db`, поэтому данные переживают обычный перезапуск процесса.
+- Авторизация в приложении использует сервер, а токен сохраняется локально в `SharedPreferences`.
+- Настройки по-прежнему хранятся в памяти и сбрасываются после перезапуска приложения.

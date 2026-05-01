@@ -116,9 +116,14 @@ class RemindCreationViewModel @Inject constructor(
     fun onDelete() {
         val id = editingId ?: return
         viewModelScope.launch {
-            repository.deleteReminder(id)
-            onClear()
-            _events.emit("Reminder deleted.")
+            runCatching {
+                repository.deleteReminder(id)
+            }.onSuccess {
+                onClear()
+                _events.emit("Reminder deleted.")
+            }.onFailure {
+                _events.emit(it.message ?: "Failed to delete reminder.")
+            }
         }
     }
 
@@ -180,12 +185,17 @@ class RemindCreationViewModel @Inject constructor(
                 note = note.trim().ifBlank { null },
                 frequency = chosenFrequency
             )
-            repository.addReminder(reminder)
-            if (notificationsEnabled.value) {
-                scheduler.schedule(reminder)
+            runCatching {
+                repository.addReminder(reminder)
+            }.onSuccess {
+                if (notificationsEnabled.value) {
+                    scheduler.schedule(reminder)
+                }
+                onClear()
+                _events.emit("Reminder scheduled.")
+            }.onFailure {
+                _events.emit(it.message ?: "Failed to save reminder.")
             }
-            onClear()
-            _events.emit("Reminder scheduled.")
         }
     }
 

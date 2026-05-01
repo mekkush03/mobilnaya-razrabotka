@@ -29,18 +29,20 @@ class RoomReminderRepository(
             }
 
     override suspend fun loadReminders() {
-        // Room Flow emits automatically.
+        val authState = authRepository.authState.value
+        val token = authState.token ?: return
+        val ownerId = authState.email ?: return
+        val remoteReminders = backendApi.fetchReminders(token)
+        dao.replaceRemindersForOwner(ownerId, remoteReminders.map { it.toEntity(ownerId) })
     }
 
     override suspend fun addReminder(reminder: Reminder) {
-        val ownerId = authRepository.authState.value.email?.takeIf {
-            authRepository.authState.value.isLoggedIn
-        } ?: OWNER_GUEST
-        dao.insertReminder(reminder.toEntity(ownerId))
-        val token = authRepository.authState.value.token
-        if (!token.isNullOrBlank()) {
-            runCatching { backendApi.sendReminder(token, reminder) }
-        }
+        val authState = authRepository.authState.value
+        val ownerId = authState.email?.takeIf { authState.isLoggedIn } ?: OWNER_GUEST
+        val savedReminder = authState.token?.let { token ->
+            runCatching { backendApi.upsertReminder(token, reminder) }.getOrDefault(reminder)
+        } ?: reminder
+        dao.insertReminder(savedReminder.toEntity(ownerId))
     }
 
     override suspend fun getReminder(id: String): Reminder? {
@@ -48,6 +50,10 @@ class RoomReminderRepository(
     }
 
     override suspend fun deleteReminder(id: String) {
+        val token = authRepository.authState.value.token
+        if (!token.isNullOrBlank()) {
+            runCatching { backendApi.deleteReminder(token, id) }
+        }
         dao.deleteReminderById(id)
     }
 }
